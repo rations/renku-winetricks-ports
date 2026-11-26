@@ -7,8 +7,8 @@ runtimes, .NET, core fonts, d3dcompiler, DXVK, vkd3d-proton) into a Wine prefix.
 
 | Port | Version | Notes |
 |---|---|---|
-| `app-emulation/winetricks` | 20260827~git, REVISION 3 | A snapshot of Winetricks' main branch, below, with one patch for its GUI on RenkuOS. REVISION 3 is not built yet; REVISION 2 (no patches) is the tested one. |
-| `sys-devel/llvm_mingw` | 20251216, REVISION 1 | A MinGW-w64 toolchain on the clang/lld that RenkuOS already ships (llvm21 21.1.8), with the mingw-w64 headers and C runtime, compiler-rt and libc++ for 32- and 64-bit Windows. DXVK and vkd3d-proton need it to be built on RenkuOS. Below. Package not built yet. |
+| `app-emulation/winetricks` | 20260827~git, REVISION 3 | A snapshot of Winetricks' main branch, below, with one patch for its GUI on RenkuOS. REVISION 3 built; its GUI tried on the build VM, below. The verbs were tested with REVISION 2, which differs only by the patch. |
+| `sys-devel/llvm_mingw` | 20251216, REVISION 1 | A MinGW-w64 toolchain on the clang/lld that RenkuOS already ships (llvm21 21.1.8), with the mingw-w64 headers and C runtime, compiler-rt and libc++ for 32- and 64-bit Windows. DXVK and vkd3d-proton need it to be built on RenkuOS. Below. Built and tested on the build VM. |
 | `app-emulation/dxvk` | 3.1.1, REVISION 1 | DXVK built with llvm_mingw, with DXVK's fix 84383189, and a Winetricks verb file that installs the packaged DLLs into a prefix. Not built yet. |
 
 Planned: `app-emulation/vkd3d-proton`, the same way as dxvk.
@@ -35,7 +35,14 @@ REVISION 1 lacked `cmd:unzstd`; it was built and tested but never published.
   REVISION 3 patch treats RenkuOS as macOS is treated, and starts RenkuOS's Terminal, which has
   no `-e`, with `/bin/sh -c <command>` for the GUI's shell and Wine command items. The GUI
   needs zenity or kdialog; the repositories have only kdialog (`kdialog_kf6`), which this
-  package does not require. Not tried yet.
+  package does not require: installing it brings 42 packages (Qt 6, KDE Frameworks 6 and
+  their dependencies). Qt draws through its RenkuOS platform plugin, so kdialog's dialogs
+  are native windows.
+- kdialog opens its menus at its own size: the `--geometry 600x400` Winetricks asks for has
+  no effect (the first menu opened at 272 x 264).
+- With `--gui` and a verb on the command line, Winetricks shows its warnings (running as
+  root, Wine's wow64 mode) as dialogs, one after another, before it starts. Started with no
+  verbs, it prints them to its terminal instead.
 - RenkuOS has no `pgrep`. Winetricks uses it only in the `icodecs`, `webview2`, `wmi` and
   `fontxplorer` verbs and to stop a download cancelled in the GUI.
 - It warns that it runs as root (RenkuOS's user is uid 0) and that `taskset` is missing. Both
@@ -63,6 +70,20 @@ Before the recipe, the same scripts were run by hand on the build VM (RenkuOS ni
 CRT tests: about 2970 checks, no failures) and a C++ test with `std::thread`, mutexes,
 condition variables and an exception rethrown across threads, built for both architectures,
 ran under Wine 11.22 REVISION 3.
+
+The package, built with `haikuporter` and installed on the same VM (2026-11-26): its 46
+commands are in `/boot/system/bin`, it requires only `haiku` and llvm21's `llvm21`,
+`llvm21_clang` and `llvm21_lld`, and it has no libtool archives. With the installed commands,
+for both architectures: a C hello world, llvm-mingw's `hello-exception.cpp` and the
+`std::thread` test above build and run under Wine, exit status 0; `widl` makes a header from
+an IDL file that imports `unknwn.idl`.
+
+Programs linked against its libc++ need `libc++.dll` and `libunwind.dll` (in
+`develop/tools/llvm_mingw/<arch>-w64-mingw32/bin`) beside them or on `WINEPATH`; otherwise
+Wine cannot start them (exit status 53). `-static` links them in, as DXVK's `meson.build` does.
+
+`widl` has the package's directory compiled in, `/packages/llvm_mingw-<version>-<revision>`,
+so a new revision is built clean.
 
 ## dxvk
 
@@ -100,7 +121,14 @@ each in a new prefix, the first one downloading everything afresh: every verb as
 d3dprobe 6/8 and d3d12probe 15/15 three times per prefix. Slower there: corefonts 108 to 128 s,
 vcrun2022 38 to 39 s (239 s with the downloads), the others 26 to 35 s.
 
-Not tried yet: the GUI, other verbs.
+**REVISION 3** on the same VM, with `kdialog_kf6` 26.08.0 installed from the repositories:
+`winetricks` with no verbs reports "winetricks GUI enabled, using kdialog 26.08.0" and opens
+its first menu, a window titled "Winetricks - choose a wineprefix" (visible, checked with
+`hey`); closing it ends Winetricks. `winetricks --gui winecmd` starts
+`Terminal /bin/sh -c "'wine' 'cmd.exe'"`, and `cmd.exe` runs in it, in the prefix's C:
+drive. Nobody has looked at the GUI on a screen yet, or used its menus to install a verb.
+
+Not tried yet: other verbs.
 
 ## History
 
@@ -108,6 +136,6 @@ Not tried yet: the GUI, other verbs.
 |---|---|---|---|
 | winetricks | 1 | 2026-11-26 | New. Built and tested on the RenkuOS build VM; never published. |
 | winetricks | 2 | 2026-11-26 | Requires `cmd:unzstd`, which the `vkd3d` verb needs. |
-| winetricks | 3 | 2026-11-26 | A patch: the GUI starts on RenkuOS, and its terminal items start RenkuOS's Terminal. Not built yet. |
-| llvm_mingw | 1 | 2026-11-26 | New. Not built as a package yet. |
+| winetricks | 3 | 2026-11-26 | A patch: the GUI starts on RenkuOS, and its terminal items start RenkuOS's Terminal. Built and tried on the build VM. |
+| llvm_mingw | 1 | 2026-11-26 | New. Built and tested on the build VM. |
 | dxvk | 1 | 2026-11-26 | New. Not built yet. |
