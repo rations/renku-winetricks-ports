@@ -8,7 +8,7 @@ runtimes, .NET, core fonts, d3dcompiler, DXVK, vkd3d-proton) into a Wine prefix.
 | Port | Version | Notes |
 |---|---|---|
 | `app-emulation/winetricks` | 20260827~git, REVISION 3 | A snapshot of Winetricks' main branch, below, with one patch for its GUI on RenkuOS. REVISION 3 built; its GUI tried on the build VM, below. The verbs were tested with REVISION 2, which differs only by the patch. |
-| `sys-devel/llvm_mingw` | 20251216, REVISION 1 | A MinGW-w64 toolchain on the clang/lld that RenkuOS already ships (llvm21 21.1.8), with the mingw-w64 headers and C runtime, compiler-rt and libc++ for 32- and 64-bit Windows. DXVK and vkd3d-proton need it to be built on RenkuOS. Below. Built and tested on the build VM. |
+| `dev-util/llvm_mingw` | 20251216, REVISION 1 | A MinGW-w64 toolchain on the clang/lld that RenkuOS already ships (llvm21 21.1.8), with the mingw-w64 headers and C runtime, compiler-rt and libc++ for 32- and 64-bit Windows. DXVK and vkd3d-proton need it to be built on RenkuOS. Below. Built and tested on the build VM. |
 | `app-emulation/dxvk` | 3.1.1, REVISION 1 | DXVK built with llvm_mingw, with DXVK's fix 84383189, and a Winetricks verb file that installs the packaged DLLs into a prefix. Built and tested on the build VM and on bare metal, below. |
 | `kde-apps/kdialog` | kdialog_kf6 26.08.0, REVISION 3 | HaikuPorts' recipe with one patch: `--geometry` works without X11, so Winetricks' windows open at the size it asks for. Replaces the repositories' REVISION 1. Built and tested on the build VM, installed on bare metal; below. |
 | `app-emulation/vkd3d_proton` | 3.1, REVISION 1 | vkd3d-proton built with llvm_mingw, with the release's build id, and a Winetricks verb file, as for dxvk. Built and tested on the build VM and on bare metal, below. |
