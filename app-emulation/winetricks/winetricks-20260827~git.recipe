@@ -1,0 +1,54 @@
+SUMMARY="Installs Windows runtimes, fonts and components into Wine prefixes"
+DESCRIPTION="Winetricks downloads and installs the redistributable runtimes, fonts and \
+components that some Windows programs need, such as the Visual C++ runtimes, the .NET \
+Framework, the core fonts, d3dcompiler, DXVK and vkd3d-proton, and changes Wine settings. \
+It works on one Wine prefix at a time (WINEPREFIX, by default ~/.wine).
+
+This is a snapshot of Winetricks' main branch: Winetricks releases about once a year, and \
+newer snapshots carry the current download addresses and checksums. Run it from a terminal, \
+for example 'winetricks -q vcrun2022'. Its graphical interface needs zenity or kdialog, which \
+are not required by this package."
+HOMEPAGE="https://github.com/Winetricks/winetricks"
+COPYRIGHT="2007-2014 Dan Kegel
+	2008-2025 Austin English
+	2010-2025 and 23 others listed in src/winetricks"
+LICENSE="GNU LGPL v2.1"
+REVISION="2"
+srcGitRev="f3890f670867b5ffbc3938726db45c0f7d16c8ba"
+SOURCE_URI="https://github.com/Winetricks/winetricks/archive/$srcGitRev.tar.gz"
+CHECKSUM_SHA256="69e82e4da8937e26ed95c48ed724afacad1bfd0069a8800f757665e9d091e261"
+SOURCE_DIR="winetricks-$srcGitRev"
+
+ARCHITECTURES="any"
+
+PROVIDES="
+	winetricks = $portVersion
+	cmd:winetricks = $portVersion
+	"
+REQUIRES="
+	haiku
+	cmd:7z
+	cmd:cabextract
+	cmd:curl
+	cmd:od
+	cmd:sha256sum
+	cmd:tar
+	cmd:unzip
+	cmd:unzstd
+	cmd:wine
+	cmd:wineserver
+	cmd:xz
+	"
+
+BUILD_REQUIRES="
+	haiku_devel
+	"
+
+INSTALL()
+{
+	install -d -m 755 "$binDir" "$manDir/man1" "$dataDir/bash-completion/completions"
+	install -m 755 src/winetricks "$binDir/winetricks"
+	install -m 644 src/winetricks.1 "$manDir/man1/winetricks.1"
+	install -m 644 src/winetricks.bash-completion \
+		"$dataDir/bash-completion/completions/winetricks"
+}
