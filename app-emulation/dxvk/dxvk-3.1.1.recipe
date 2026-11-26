@@ -21,6 +21,7 @@ CHECKSUM_SHA256="ef4944134f6c39d0937f265391db2d08bca33cd3a2f0ee9133e1eb55f1cc657
 SOURCE_FILENAME="dxvk-$portVersion.tar.gz"
 SOURCE_DIR="dxvk-$portVersion"
 PATCHES="dxvk-$portVersion.patchset"
+ADDITIONAL_FILES="dxvk_renkuos.verb"
 # DXVK's submodules, at the commits v3.1.1 pins. A release has no source tarball with them.
 vulkanHeadersRev="8864cdc896bbc2a9b6eb36b3218fc9ef57908d77"
 SOURCE_URI_2="https://github.com/KhronosGroup/Vulkan-Headers/archive/$vulkanHeadersRev.tar.gz"
