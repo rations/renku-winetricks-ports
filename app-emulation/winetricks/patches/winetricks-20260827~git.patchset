@@ -1,0 +1,54 @@
+From e3295f4aa4d2d316e3680e7fe3b86b6988e964a4 Mon Sep 17 00:00:00 2001
+From: rations <ehqcar@proton.me>
+Date: Thu, 26 Nov 2026 17:02:55 +1000
+Subject: [PATCH] Start the GUI and terminals on RenkuOS
+
+With no verbs, winetricks opens its GUI only when DISPLAY or
+WAYLAND_DISPLAY is set, or on macOS. RenkuOS (uname -s: Haiku) has
+neither X11 nor Wayland, and its programs open windows without them,
+so it printed its usage instead. Treat it as macOS is treated.
+
+The GUI's shell and Wine command items start a terminal with
+"-e <command>". RenkuOS's Terminal has no -e (it prints its usage
+for any option it does not know); the command and its arguments
+follow its options. Give it "/bin/sh -c <command>" there.
+
+Not verified here: the GUI itself (kdialog on RenkuOS), which a person
+has to look at.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/winetricks | 10 +++++++++-
+ 1 file changed, 9 insertions(+), 1 deletion(-)
+
+diff --git a/src/winetricks b/src/winetricks
+index c166340..1f4006a 100755
+--- a/src/winetricks
++++ b/src/winetricks
+@@ -20030,7 +20030,12 @@ winetricks_shell()
+                                 _W_args="${_W_args}$(_W_escape "${arg}") "
+                             done
+ 
+-                            WINEDEBUG=-all ${term} -e "${_W_args}"
++                            if [ "${term}" = "Terminal" ] && [ "$(uname -s)" = "Haiku" ]; then
++                                # The Terminal of RenkuOS and Haiku has no -e: the command follows its options.
++                                WINEDEBUG=-all ${term} /bin/sh -c "${_W_args}"
++                            else
++                                WINEDEBUG=-all ${term} -e "${_W_args}"
++                            fi
+                         else
+                             WINEDEBUG=-all ${term}
+                         fi
+@@ -20223,6 +20228,9 @@ if ! test "${WINETRICKS_LIB}"; then
+             if [ -z "${DISPLAY}" ] && [ -z "${WAYLAND_DISPLAY}" ]; then
+                 if [ "$(uname -s)" = "Darwin" ]; then
+                     echo "Running on OSX, but DISPLAY is not set...probably using Mac Driver."
++                elif [ "$(uname -s)" = "Haiku" ]; then
++                    # RenkuOS and Haiku have no X11 or Wayland; their windows need no DISPLAY.
++                    :
+                 else
+                     echo "DISPLAY not set, not defaulting to gui"
+                     winetricks_usage
+-- 
+2.47.3
+
