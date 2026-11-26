@@ -10,6 +10,7 @@ runtimes, .NET, core fonts, d3dcompiler, DXVK, vkd3d-proton) into a Wine prefix.
 | `app-emulation/winetricks` | 20260827~git, REVISION 3 | A snapshot of Winetricks' main branch, below, with one patch for its GUI on RenkuOS. REVISION 3 built; its GUI tried on the build VM, below. The verbs were tested with REVISION 2, which differs only by the patch. |
 | `sys-devel/llvm_mingw` | 20251216, REVISION 1 | A MinGW-w64 toolchain on the clang/lld that RenkuOS already ships (llvm21 21.1.8), with the mingw-w64 headers and C runtime, compiler-rt and libc++ for 32- and 64-bit Windows. DXVK and vkd3d-proton need it to be built on RenkuOS. Below. Built and tested on the build VM. |
 | `app-emulation/dxvk` | 3.1.1, REVISION 1 | DXVK built with llvm_mingw, with DXVK's fix 84383189, and a Winetricks verb file that installs the packaged DLLs into a prefix. Built and tested on the build VM and on bare metal, below. |
+| `kde-apps/kdialog` | kdialog_kf6 26.08.0, REVISION 3 | HaikuPorts' recipe with one patch: `--geometry` works without X11, so Winetricks' windows open at the size it asks for. Replaces the repositories' REVISION 1. Built and tested on the build VM, installed on bare metal; below. |
 | `app-emulation/vkd3d_proton` | 3.1, REVISION 1 | vkd3d-proton built with llvm_mingw, with the release's build id, and a Winetricks verb file, as for dxvk. Built and tested on the build VM and on bare metal, below. |
 
 
@@ -38,8 +39,10 @@ REVISION 1 lacked `cmd:unzstd`; it was built and tested but never published.
   package does not require: installing it brings 42 packages (Qt 6, KDE Frameworks 6 and
   their dependencies). Qt draws through its RenkuOS platform plugin, so kdialog's dialogs
   are native windows.
-- kdialog opens its menus at its own size: the `--geometry 600x400` Winetricks asks for has
-  no effect (the first menu opened at 272 x 264).
+- The repositories' kdialog (`kdialog_kf6` REVISION 1) opens Winetricks' menus at its own
+  size, 272 x 264, too cramped to use: it applies `--geometry` only when built with X11, and
+  RenkuOS has none. The `kdialog_kf6` here (below) applies it, and the menus open at the
+  600 x 400 Winetricks asks for.
 - With `--gui` and a verb on the command line, Winetricks shows its warnings (running as
   root, Wine's wow64 mode) as dialogs, one after another, before it starts. Started with no
   verbs, it prints them to its terminal instead.
@@ -189,9 +192,38 @@ vcrun2022 38 to 39 s (239 s with the downloads), the others 26 to 35 s.
 its first menu, a window titled "Winetricks - choose a wineprefix" (visible, checked with
 `hey`); closing it ends Winetricks. `winetricks --gui winecmd` starts
 `Terminal /bin/sh -c "'wine' 'cmd.exe'"`, and `cmd.exe` runs in it, in the prefix's C:
-drive. Nobody has looked at the GUI on a screen yet, or used its menus to install a verb.
+drive.
+
+On bare metal, tried by hand on its screen, with Wine 11.22 REVISION 3, Winetricks REVISION 3 and the
+repositories' `kdialog_kf6` 26.08.0 REVISION 1: the GUI opened in the default prefix, after
+Wine updated it; `d3dcompiler_47`, chosen in its menus, installed (the same two DLLs as the
+command-line test, byte for byte, set native), and the GUI went back to the prefix's menu.
+The windows were too small to use comfortably (272 x 264), which the `kdialog_kf6` port below
+fixes. With it installed on the build VM, Winetricks' first window opens at 600 x 400.
 
 Not tried yet: other verbs.
+
+## kdialog
+
+HaikuPorts' `kdialog_kf6-26.08.0.recipe`, unchanged except for its REVISION and the
+patchset, so that it replaces the repositories' REVISION 1. kdialog parses `--geometry` with
+Xlib's `XParseGeometry` and, built without X11 as on RenkuOS, ignores it: every dialog opens
+at its smallest size. The patch parses the same syntax with Qt when there is no X11, resizes
+to the size and moves to the offsets given; for a negative offset it counts the window's
+border and title bar in, so `-0-0` puts the window in the corner. The X11 build is unchanged.
+
+**Tested** on the build VM (1024 x 768), reading each window's frame with `hey`: no geometry
+gives 272 x 264, as before; `600x400+100+100` 600 x 400 with the frame at 100,100;
+`800x600`; `+300+200` at the default size; `600x400-0-0` and `600x400-20-10` the frame in
+the corner, and 20 and 10 pixels from the right and bottom edges; an invalid geometry is
+ignored. Winetricks' first window, "Winetricks - choose a wineprefix", opens at 600 x 400.
+Installed on bare metal; nobody has looked at it there yet.
+
+Building it needs the KDE Frameworks 6 and Qt 6 development packages installed on the build
+machine (`extra_cmake_modules`, `kdbusaddons6_devel`, `kguiaddons6_devel`,
+`kiconthemes6_devel`, `kio6_devel`, `knotifications6_devel`, `ktextwidgets6_devel`,
+`kwindowsystem6_devel`, `qt6_tools_devel`, `qt6_base_devel`, `zlib_devel`): haikuporter
+takes them from the installed packages.
 
 ## Moving to a new release
 
@@ -205,7 +237,9 @@ version, check them before anything else:
   and check that the release's own `d3d12core.dll` carries that id.
 - **dxvk: drop the patchset** once the new release has DXVK's commit 84383189 (the release's
   `git log` contains it); check with `d3dprobe`, which gives 6/8 without the fix.
-- **Both:** the submodule commits, and their checksums, are the ones the new tag pins; the
+- **kdialog: keep the patchset** until a kdialog release applies `--geometry` without X11
+  (its `src/utils.cpp`), and keep REVISION above the repositories' own.
+- **dxvk and vkd3d_proton:** the submodule commits, and their checksums, are the ones the new tag pins; the
   verb files' `title` lines name the version.
 
 ## History
@@ -217,4 +251,6 @@ version, check them before anything else:
 | winetricks | 3 | 2026-11-26 | A patch: the GUI starts on RenkuOS, and its terminal items start RenkuOS's Terminal. Built and tried on the build VM. |
 | llvm_mingw | 1 | 2026-11-26 | New. Built and tested on the build VM. |
 | dxvk | 1 | 2026-11-26 | New. Built and tested on the build VM and on bare metal. (A first build stopped at INSTALL, without a package, because the recipe lacked `ADDITIONAL_FILES` for the verb.) |
+| kdialog_kf6 | 2 | 2026-11-26 | The `--geometry` patch, first version: a negative offset left the border and title bar out. Built and installed on the build VM only; never published. |
+| kdialog_kf6 | 3 | 2026-11-26 | The patch counts the frame in for a negative offset. Built and tested on the build VM; installed on bare metal. |
 | vkd3d_proton | 1 | 2026-11-26 | New, with the build-id patch. Built and tested on the build VM and on bare metal. |
