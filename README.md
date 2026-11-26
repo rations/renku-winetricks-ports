@@ -10,8 +10,8 @@ runtimes, .NET, core fonts, d3dcompiler, DXVK, vkd3d-proton) into a Wine prefix.
 | `app-emulation/winetricks` | 20260827~git, REVISION 3 | A snapshot of Winetricks' main branch, below, with one patch for its GUI on RenkuOS. REVISION 3 built; its GUI tried on the build VM, below. The verbs were tested with REVISION 2, which differs only by the patch. |
 | `sys-devel/llvm_mingw` | 20251216, REVISION 1 | A MinGW-w64 toolchain on the clang/lld that RenkuOS already ships (llvm21 21.1.8), with the mingw-w64 headers and C runtime, compiler-rt and libc++ for 32- and 64-bit Windows. DXVK and vkd3d-proton need it to be built on RenkuOS. Below. Built and tested on the build VM. |
 | `app-emulation/dxvk` | 3.1.1, REVISION 1 | DXVK built with llvm_mingw, with DXVK's fix 84383189, and a Winetricks verb file that installs the packaged DLLs into a prefix. Built and tested on the build VM and on bare metal, below. |
+| `app-emulation/vkd3d_proton` | 3.1, REVISION 1 | vkd3d-proton built with llvm_mingw, with the release's build id, and a Winetricks verb file, as for dxvk. Built and tested on the build VM and on bare metal, below. |
 
-Planned: `app-emulation/vkd3d-proton`, the same way as dxvk.
 
 ## Winetricks
 
@@ -119,8 +119,49 @@ three runs, each in a new prefix (`wineboot -i`):
 d3d12 cannot create a device: `D3D12CreateDevice` returns E_NOINTERFACE, and `d3d12probe`
 stops there (1 pass, 1 fail). Winetricks' own `dxvk` verb, with the 3.1.1 release, does the same: in one fresh prefix
 on the build VM, `d3d12probe` gave 15/15 before it and stopped there after it, and after this
-verb too. With vkd3d-proton installed as well (Winetricks' `vkd3d` verb), `d3d12probe` gives
-15/15 (*Tested*, below).
+verb too. With vkd3d-proton installed as well, `d3d12probe` gives 15/15: the packaged one
+(*vkd3d_proton*, below) or Winetricks' `vkd3d` verb (*Tested*, below).
+
+## vkd3d_proton
+
+vkd3d-proton's 3.1 tag, and the submodules its build uses, at the commits the tag pins (one
+archive each): Vulkan-Headers and SPIRV-Headers, dxil-spirv, and dxil-spirv's own SPIRV-Headers
+and dxbc-spirv, with that one's SPIRV-Headers. dxil-spirv's SPIRV-Cross and SPIRV-Tools are for
+its command-line tools and are not fetched. The port is named `vkd3d_proton`, as a package name
+cannot have a hyphen. Built as vkd3d-proton's `package-release.sh` builds a release, with its
+own cross files, which name llvm_mingw's `*-w64-mingw32-gcc` and `*-w64-mingw32-widl`. It
+installs the DLLs into `/boot/system/data/vkd3d-proton/x86` and `x64`, as the release names
+them, and `vkd3d_proton_renkuos.verb` beside them:
+
+    winetricks /boot/system/data/vkd3d-proton/vkd3d_proton_renkuos.verb
+
+The verb does what Winetricks' own `vkd3d` verb does with a release (copies d3d12 and
+d3d12core into the prefix and sets them native), from the package. `winetricks
+alldlls=default` takes the overrides away again.
+
+**The patch.** vkd3d-proton's build id is `git describe` of its source tree, and a tree
+without git, such as a release tarball, gets the fallback `12345678`: every tarball build, of
+any version, would have the same id. vkd3d-proton keys the pipeline libraries a program saves
+(`ID3D12PipelineLibrary`) on that id, so a library saved by an older build would be taken as
+current. The patchset makes the fallback `4522cc1a8b1347f`, the tag's commit cut to 15
+digits, the id the official 3.1 DLLs carry (it is in their `d3d12core.dll`). Drop it with the
+next release, whose id differs.
+
+**Tested.** Built with `haikuporter` on the build VM (RenkuOS nightly 95), 2026-11-26. The
+package has the four DLLs (PE32+ and PE32), which import only Windows system DLLs, the UCRT
+`api-ms-win-crt-*` DLLs and dxgi. Installed from it on the build VM and on bare metal, with
+Wine 11.22 REVISION 3, dxvk REVISION 1 and Winetricks REVISION 3 (build VM) or 2 (bare metal);
+on each, three runs, each in a new prefix (`wineboot -i`), with both packaged verbs:
+
+| Step | Build VM | Bare metal |
+|---|---|---|
+| `winetricks -q /boot/system/data/dxvk/dxvk_renkuos.verb` | Installed, 5 s | Installed, 10 s |
+| `winetricks -q /boot/system/data/vkd3d-proton/vkd3d_proton_renkuos.verb` | Installed, 4 s | Installed, 11 to 12 s |
+| The vkd3d-proton DLLs in `system32` and `syswow64` | Identical to the package's, 4 of 4 | The same |
+| Overrides | d3d8, d3d9, d3d10core, d3d11, d3d12, d3d12core and dxgi native | The same |
+| The Wine port's `d3dprobe`, three times per prefix | 8/8, through DXVK ("DXVK: 3.1.1") | The same |
+| The Wine port's `d3d12probe`, three times per prefix | 15/15, through vkd3d-proton (its log: "vkd3d-proton - build: 4522cc1a8b1347f.") | The same |
+| Then `winetricks -q alldlls=default`, in the last prefix | No overrides left; `d3dprobe` 8/8 and `d3d12probe` 15/15 through Wine's own DLLs (no DXVK or vkd3d-proton log) | The same |
 
 ## Tested
 
@@ -161,3 +202,4 @@ Not tried yet: other verbs.
 | winetricks | 3 | 2026-11-26 | A patch: the GUI starts on RenkuOS, and its terminal items start RenkuOS's Terminal. Built and tried on the build VM. |
 | llvm_mingw | 1 | 2026-11-26 | New. Built and tested on the build VM. |
 | dxvk | 1 | 2026-11-26 | New. Built and tested on the build VM and on bare metal. (A first build stopped at INSTALL, without a package, because the recipe lacked `ADDITIONAL_FILES` for the verb.) |
+| vkd3d_proton | 1 | 2026-11-26 | New, with the build-id patch. Built and tested on the build VM and on bare metal. |

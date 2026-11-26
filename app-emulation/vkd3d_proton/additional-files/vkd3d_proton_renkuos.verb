@@ -1,0 +1,24 @@
+w_metadata vkd3d_proton_renkuos dlls \
+    title="vkd3d-proton 3.1, from the RenkuOS vkd3d_proton package" \
+    publisher="Hans-Kristian Arntzen" \
+    year="2026" \
+    media="download" \
+    installed_file1="${W_SYSTEM32_DLLS_WIN}/d3d12.dll" \
+    installed_file2="${W_SYSTEM32_DLLS_WIN}/d3d12core.dll"
+
+# What Winetricks' own helper_vkd3d_proton does with a release, from the DLLs the vkd3d_proton
+# package installed beside this file, so nothing is downloaded.
+load_vkd3d_proton_renkuos()
+{
+    _W_vkd3d_dir=/boot/system/data/vkd3d-proton
+    for _W_dll in d3d12 d3d12core; do
+        w_try_cp_dll "${_W_vkd3d_dir}/x86/${_W_dll}.dll" "${W_SYSTEM32_DLLS}/"
+    done
+    if test "${W_ARCH}" = "win64"; then
+        for _W_dll in d3d12 d3d12core; do
+            w_try_cp_dll "${_W_vkd3d_dir}/x64/${_W_dll}.dll" "${W_SYSTEM64_DLLS}/"
+        done
+    fi
+    w_override_dlls native d3d12 d3d12core
+    unset _W_dll _W_vkd3d_dir
+}

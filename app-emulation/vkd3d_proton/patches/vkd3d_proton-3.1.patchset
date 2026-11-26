@@ -1,0 +1,37 @@
+From 6a609a72971fe6de67e708e78c827abe8f36af1b Mon Sep 17 00:00:00 2001
+From: rations <ehqcar@proton.me>
+Date: Thu, 26 Nov 2026 17:49:29 +1000
+Subject: [PATCH] Build id of the v3.1 tag when built from its tarball
+
+vkd3d_build is "git describe --always --exclude=* --abbrev=15" of the
+source tree, and falls back to 12345678 when there is no git checkout, as
+in a release tarball. vkd3d-proton stores the build id in the pipeline
+libraries a program saves (ID3D12PipelineLibrary) and rejects a library
+from another build, because its shader compiler may have changed. With
+the fallback every tarball build has the same id, so a library saved by
+an older build would be taken as current.
+
+The fallback becomes 4522cc1a8b1347f, the tag's commit
+4522cc1a8b1347f1ab1b0f7b14a23ed9444d95d1 cut to 15 digits, the id the
+official 3.1 DLLs carry (it is in their d3d12core.dll). Drop this patch
+with the next release, whose id will differ.
+---
+ meson.build | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/meson.build b/meson.build
+index 6fa1a1f..a823401 100644
+--- a/meson.build
++++ b/meson.build
+@@ -169,7 +169,7 @@ endif
+ vkd3d_build = vcs_tag(
+   command : ['git', 'describe', '--always', '--exclude=*', '--abbrev=15', '--dirty=0'],
+   input   : 'vkd3d_build.h.in',
+-  output  : 'vkd3d_build.h', fallback : '12345678')
++  output  : 'vkd3d_build.h', fallback : '4522cc1a8b1347f')
+ 
+ vkd3d_version = vcs_tag(
+   command : ['git', 'describe', '--always', '--tags', '--dirty=+'],
+-- 
+2.47.3
+
