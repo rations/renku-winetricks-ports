@@ -1,0 +1,27 @@
+w_metadata dxvk_renkuos dlls \
+    title="DXVK 3.1.1 with its fix 84383189, from the RenkuOS dxvk package" \
+    publisher="Philip Rebohle" \
+    year="2026" \
+    media="download" \
+    installed_file1="${W_SYSTEM32_DLLS_WIN}/d3d8.dll" \
+    installed_file2="${W_SYSTEM32_DLLS_WIN}/d3d9.dll" \
+    installed_file3="${W_SYSTEM32_DLLS_WIN}/d3d10core.dll" \
+    installed_file4="${W_SYSTEM32_DLLS_WIN}/d3d11.dll" \
+    installed_file5="${W_SYSTEM32_DLLS_WIN}/dxgi.dll"
+
+# What Winetricks' own helper_dxvk does with a release, from the DLLs the dxvk package installed
+# beside this file, so nothing is downloaded.
+load_dxvk_renkuos()
+{
+    _W_dxvk_dir=/boot/system/data/dxvk
+    for _W_dll in dxgi d3d8 d3d9 d3d10core d3d11; do
+        w_try_cp_dll "${_W_dxvk_dir}/x32/${_W_dll}.dll" "${W_SYSTEM32_DLLS}/"
+    done
+    if test "${W_ARCH}" = "win64"; then
+        for _W_dll in dxgi d3d8 d3d9 d3d10core d3d11; do
+            w_try_cp_dll "${_W_dxvk_dir}/x64/${_W_dll}.dll" "${W_SYSTEM64_DLLS}/"
+        done
+    fi
+    w_override_dlls native dxgi d3d8 d3d9 d3d10core d3d11
+    unset _W_dll _W_dxvk_dir
+}

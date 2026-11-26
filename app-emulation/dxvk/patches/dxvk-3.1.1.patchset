@@ -1,0 +1,42 @@
+From 84383189679b3922ffd0d22da68d1be346ef31df Mon Sep 17 00:00:00 2001
+From: Philip Rebohle <philip.rebohle@tu-dortmund.de>
+Date: Tue, 22 Sep 2026 13:47:29 +0200
+Subject: [PATCH] [dxvk] Fix clearing shared images
+
+Fixes #5919.
+---
+ src/dxvk/dxvk_context.cpp | 15 +++++++++------
+ 1 file changed, 9 insertions(+), 6 deletions(-)
+
+diff --git a/src/dxvk/dxvk_context.cpp b/src/dxvk/dxvk_context.cpp
+index 7220b7be..57749748 100644
+--- a/src/dxvk/dxvk_context.cpp
++++ b/src/dxvk/dxvk_context.cpp
+@@ -9703,15 +9703,18 @@ namespace dxvk {
+ 
+ 
+   void DxvkContext::prepareSharedImages() {
+-    // Only flush clears for shared images, and restore layouts
+-    bool hasSharedClear = false;
++    small_vector<Rc<DxvkImage>, 8u> imagesToClear;
+ 
+-    for (const auto& image : m_nonDefaultLayoutImages) {
+-      if (image->info().shared)
+-        hasSharedClear = flushDeferredClear(*image, image->getAvailableSubresources());
++    // Only flush clears for shared images, and restore layouts
++    for (const auto& clear : m_deferredClears) {
++      if (clear.imageView->image()->info().shared)
++        imagesToClear.push_back(clear.imageView->image());
+     }
+ 
+-    if (hasSharedClear)
++    for (const auto& image : imagesToClear)
++      flushDeferredClear(*image, image->getAvailableSubresources());
++
++    if (!imagesToClear.empty())
+       flushBarriers();
+ 
+     restoreImageLayouts([] (DxvkImage& image) {
+-- 
+2.47.3
+

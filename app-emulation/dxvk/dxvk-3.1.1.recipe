@@ -1,0 +1,105 @@
+SUMMARY="Direct3D 8, 9, 10 and 11 on Vulkan, for Wine"
+DESCRIPTION="DXVK implements Direct3D 8, 9, 10 and 11 on Vulkan. In a Wine prefix it replaces \
+Wine's own d3d8, d3d9, d3d10core, d3d11 and dxgi, and Direct3D programs then draw through Vulkan.
+
+This package holds the 32- and 64-bit DLLs, built on RenkuOS, and a Winetricks verb that \
+installs them into a prefix:
+    winetricks /boot/system/data/dxvk/dxvk_renkuos.verb
+It carries DXVK's own fix for back buffers that a program only clears (commit 84383189), which \
+no release has yet. Winetricks' own 'dxvk' verb installs the 3.1.1 release without it."
+HOMEPAGE="https://github.com/doitsujin/dxvk"
+COPYRIGHT="2017-2026 Philip Rebohle
+	2019 Joshua Ashton
+	2019 Robin Kertels
+	2023 Jeffrey Ellison"
+LICENSE="Zlib
+	MIT
+	Apache v2"
+REVISION="1"
+SOURCE_URI="https://github.com/doitsujin/dxvk/archive/v$portVersion.tar.gz"
+CHECKSUM_SHA256="ef4944134f6c39d0937f265391db2d08bca33cd3a2f0ee9133e1eb55f1cc657c"
+SOURCE_FILENAME="dxvk-$portVersion.tar.gz"
+SOURCE_DIR="dxvk-$portVersion"
+PATCHES="dxvk-$portVersion.patchset"
+# DXVK's submodules, at the commits v3.1.1 pins. A release has no source tarball with them.
+vulkanHeadersRev="8864cdc896bbc2a9b6eb36b3218fc9ef57908d77"
+SOURCE_URI_2="https://github.com/KhronosGroup/Vulkan-Headers/archive/$vulkanHeadersRev.tar.gz"
+CHECKSUM_SHA256_2="35824117f649befc664a12622bc801eddbba036ac03d906db400ee1c1e7903e9"
+SOURCE_FILENAME_2="Vulkan-Headers-$vulkanHeadersRev.tar.gz"
+SOURCE_DIR_2="Vulkan-Headers-$vulkanHeadersRev"
+spirvHeadersRev="04f10f650d514df88b76d25e83db360142c7b174"
+SOURCE_URI_3="https://github.com/KhronosGroup/SPIRV-Headers/archive/$spirvHeadersRev.tar.gz"
+CHECKSUM_SHA256_3="1b220e3eec1714f0451b0e3652979bd280edf10893f617837b88e6359a804ded"
+SOURCE_FILENAME_3="SPIRV-Headers-$spirvHeadersRev.tar.gz"
+SOURCE_DIR_3="SPIRV-Headers-$spirvHeadersRev"
+dxbcSpirvRev="bf14419e5fa7eacb817b7b632f03cb61d61bbad7"
+SOURCE_URI_4="https://github.com/doitsujin/dxbc-spirv/archive/$dxbcSpirvRev.tar.gz"
+CHECKSUM_SHA256_4="7a2bd35d2a2186f5f77137c00302b0d9364ac01017e8ae41e30f61850d7cc2f4"
+SOURCE_FILENAME_4="dxbc-spirv-$dxbcSpirvRev.tar.gz"
+SOURCE_DIR_4="dxbc-spirv-$dxbcSpirvRev"
+# dxbc-spirv's own SPIRV-Headers submodule.
+dxbcSpirvHeadersRev="c8ad050fcb29e42a2f57d9f59e97488f465c436d"
+SOURCE_URI_5="https://github.com/KhronosGroup/SPIRV-Headers/archive/$dxbcSpirvHeadersRev.tar.gz"
+CHECKSUM_SHA256_5="5b6f38b430f1c68c7395c570053403da14eb4cecc7fcb4040e7a5248c2f63874"
+SOURCE_FILENAME_5="SPIRV-Headers-$dxbcSpirvHeadersRev.tar.gz"
+SOURCE_DIR_5="SPIRV-Headers-$dxbcSpirvHeadersRev"
+displayInfoRev="275e6459c7ab1ddd4b125f28d0440716e4888078"
+SOURCE_URI_6="https://github.com/doitsujin/libdisplay-info/archive/$displayInfoRev.tar.gz"
+CHECKSUM_SHA256_6="c83c3e600f90a3ac98932e9259de62ad8ad3a65dd5efb1d2abcb1e4d1c8f494a"
+SOURCE_FILENAME_6="libdisplay-info-$displayInfoRev.tar.gz"
+SOURCE_DIR_6="libdisplay-info-$displayInfoRev"
+
+# The DLLs are Windows code, the same for every RenkuOS architecture that runs Wine.
+ARCHITECTURES="any"
+
+PROVIDES="
+	dxvk = $portVersion
+	"
+REQUIRES="
+	haiku
+	cmd:winetricks
+	"
+
+BUILD_REQUIRES="
+	haiku_devel
+	"
+BUILD_PREREQUIRES="
+	llvm_mingw
+	cmd:glslang
+	cmd:meson
+	cmd:ninja
+	cmd:x86_64_w64_mingw32_g++
+	cmd:i686_w64_mingw32_g++
+	"
+
+BUILD()
+{
+	rmdir include/vulkan include/spirv subprojects/dxbc-spirv subprojects/libdisplay-info \
+		2> /dev/null || true
+	ln -sfn "$sourceDir2" include/vulkan
+	ln -sfn "$sourceDir3" include/spirv
+	ln -sfn "$sourceDir4" subprojects/dxbc-spirv
+	rmdir "$sourceDir4/submodules/spirv_headers" 2> /dev/null || true
+	ln -sfn "$sourceDir5" "$sourceDir4/submodules/spirv_headers"
+	ln -sfn "$sourceDir6" subprojects/libdisplay-info
+
+	# As DXVK's package-release.sh builds a release.
+	for bits in 64 32; do
+		meson setup --cross-file build-win$bits.txt --buildtype release --strip \
+			--prefix "$PWD/install" --bindir x$bits --libdir x$bits \
+			-Dbuild_id=false build.$bits
+		ninja -C build.$bits $jobArgs
+	done
+}
+
+INSTALL()
+{
+	for bits in 64 32; do
+		ninja -C build.$bits install
+		mkdir -p "$dataDir/dxvk/x$bits"
+		cp install/x$bits/*.dll "$dataDir/dxvk/x$bits/"
+	done
+	cp "$portDir/additional-files/dxvk_renkuos.verb" "$dataDir/dxvk/"
+	mkdir -p "$docDir"
+	cp dxvk.conf "$docDir/"
+}
