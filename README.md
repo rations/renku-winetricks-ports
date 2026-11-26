@@ -59,7 +59,13 @@ new prefix (`wineboot -i`), each verb with `winetricks -q`. Every run gave the s
 | `dxvk` | DXVK 3.1.1 installed with native overrides, 12 to 15 s. The Wine port's `d3dprobe` then gives 6/8, three times per prefix: D3D9 and D3D11 windows that are only cleared show black, DXVK 3.1.1's bug (above). |
 | `vkd3d` | vkd3d-proton 3.1 installed with native overrides, 10 to 14 s. The Wine port's `d3d12probe` then gives 15/15, three times per prefix. |
 
-Not tried yet: a bare-metal machine, the GUI, other verbs.
+The same on bare metal (RenkuOS nightly 95, Wine 11.22 REVISION 3), installed from the same
+package, which brought in cabextract and zstd_bin from the repositories by itself; three runs,
+each in a new prefix, the first one downloading everything afresh: every verb as above,
+d3dprobe 6/8 and d3d12probe 15/15 three times per prefix. Slower there: corefonts 108 to 128 s,
+vcrun2022 38 to 39 s (239 s with the downloads), the others 26 to 35 s.
+
+Not tried yet: the GUI, other verbs.
 
 ## History
 
