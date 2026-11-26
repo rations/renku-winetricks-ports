@@ -193,6 +193,21 @@ drive. Nobody has looked at the GUI on a screen yet, or used its menus to instal
 
 Not tried yet: other verbs.
 
+## Moving to a new release
+
+Each of these patches holds for one release only. When a port moves to a new upstream
+version, check them before anything else:
+
+- **vkd3d_proton: drop the patchset** and its `PATCHES` line. The patch sets the build id of the
+  3.1 tag, `4522cc1a8b1347f`; kept, it would give the new release 3.1's id, and pipeline
+  libraries saved by 3.1 would be taken as current. If tarball builds of the new release still
+  fall back to `12345678`, make the patch again with the new tag's commit, cut to 15 digits,
+  and check that the release's own `d3d12core.dll` carries that id.
+- **dxvk: drop the patchset** once the new release has DXVK's commit 84383189 (the release's
+  `git log` contains it); check with `d3dprobe`, which gives 6/8 without the fix.
+- **Both:** the submodule commits, and their checksums, are the ones the new tag pins; the
+  verb files' `title` lines name the version.
+
 ## History
 
 | Port | Revision | Date | Change |
